@@ -729,6 +729,73 @@
   }
   .pix-copy-btn:hover { background: var(--green); color: #000; }
 
+  .recurring-tag {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid rgba(251,191,36,0.35);
+    padding: 1px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .bill-item.recurring::before { background: var(--gold); }
+  .bill-item.recurring { border-color: rgba(251,191,36,0.2); }
+
+  /* Recurring section in modal */
+  .recurring-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .recurring-section.visible { display: flex; }
+
+  /* Recurring manager panel */
+  .recurring-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 28px;
+  }
+  .recurring-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .recurring-panel-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .recurring-panel-body { padding: 0 20px 16px; }
+  .recurring-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .recurring-list-item:last-child { border-bottom: none; }
+  .recurring-info { flex: 1; min-width: 0; }
+  .recurring-info .r-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .recurring-info .r-meta { font-size: 11px; color: var(--text3); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .recurring-value { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--gold); white-space: nowrap; }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -826,6 +893,18 @@
             <div class="sel-total" id="selTotal">R$ 0,00</div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Limpar</button>
+        </div>
+      </div>
+
+      <!-- Recurring Panel -->
+      <div class="recurring-panel" id="recurringPanel">
+        <div class="recurring-panel-header" onclick="toggleRecurringPanel()">
+          <h3>&#x1F501; Contas Recorrentes <span class="section-count" id="recurringCount" style="font-family:'DM Mono',monospace;font-size:11px">0</span></h3>
+          <span id="recurringChevron" style="color:var(--text3);font-size:13px">&#9660;</span>
+        </div>
+        <div class="recurring-panel-body" id="recurringPanelBody" style="display:none">
+          <div id="recurringListGlobal"></div>
+          <button class="btn btn-sm" style="margin-top:10px;border-color:var(--gold);color:var(--gold);background:var(--gold-dim)" onclick="openRecurringModal()">+ Nova recorrente</button>
         </div>
       </div>
 
@@ -1072,19 +1151,44 @@ function getInstallmentsForMonth(bills, monthKey) {
   const result = [];
   for (const bill of bills) {
     if (bill.type === 'simple') {
-      // Simple bill: show if dueDate is in this month
       if (bill.monthKey === monthKey) {
-        result.push({...bill, isInstallment: false});
+        result.push({...bill, isInstallment: false, isRecurring: false});
       }
     } else if (bill.type === 'installment') {
-      // Find the installment for this month
       const inst = (bill.installments || []).find(i => i.monthKey === monthKey);
       if (inst) {
-        result.push({...inst, isInstallment: true, parentName: bill.name});
+        result.push({...inst, isInstallment: true, isRecurring: false, parentName: bill.name});
       }
+    } else if (bill.type === 'recurring') {
+      // Recurring: always show, but with per-month paid state
+      const paidStates = bill.paidByMonth || {};
+      const monthState = paidStates[monthKey] || {};
+      // Build a virtual dueDate for this month
+      const [y, m] = monthKey.split('-');
+      const dueDay = bill.dueDay || 1;
+      const dueDate = `${y}-${m}-${String(dueDay).padStart(2,'0')}`;
+      result.push({
+        id: `${bill.id}__${monthKey}`,
+        parentId: bill.id,
+        name: bill.name,
+        value: bill.value,
+        dueDate,
+        monthKey,
+        pix: bill.pix,
+        paid: monthState.paid || false,
+        paidGu: monthState.paidGu || false,
+        paidAndrei: monthState.paidAndrei || false,
+        selected: monthState.selected || false,
+        isInstallment: false,
+        isRecurring: true,
+      });
     }
   }
   return result;
+}
+
+function getRecurringBills() {
+  return getBills().filter(b => b.type === 'recurring');
 }
 
 // ─────────────────────────────────────────────────────
@@ -1146,15 +1250,18 @@ function renderBills() {
     html += `<div class="bills-list">` + paid.map(item => billItemHTML(item)).join('') + `</div>`;
   }
   container.innerHTML = html;
+  renderRecurringPanel();
 }
 
 function billItemHTML(item) {
   const overdue = isOverdue(item.dueDate, item.paid);
-  const classes = ['bill-item', overdue ? 'overdue' : '', item.paid ? 'paid' : '', item.selected ? 'selected' : ''].filter(Boolean).join(' ');
+  const classes = ['bill-item', overdue ? 'overdue' : '', item.paid ? 'paid' : '', item.selected ? 'selected' : '', item.isRecurring ? 'recurring' : ''].filter(Boolean).join(' ');
   
   let instTag = '';
   if (item.isInstallment) {
     instTag = `<span class="installment-tag">${item.installmentNum}/${item.totalInstallments}</span>`;
+  } else if (item.isRecurring) {
+    instTag = `<span class="recurring-tag">&#x1F501; recorrente</span>`;
   }
 
   let pixBtn = '';
@@ -1210,14 +1317,26 @@ function escHTML(s) {
 // ─────────────────────────────────────────────────────
 // BILL ACTIONS
 // ─────────────────────────────────────────────────────
+function getRecurringMonthKey(itemId) {
+  // itemId for recurring is parentId__YYYY-MM
+  const parts = itemId.split('__');
+  return parts.length === 2 ? { parentId: parts[0], monthKey: parts[1] } : null;
+}
+
 function togglePaid(itemId, checked) {
   const bills = getBills();
+  const rec = getRecurringMonthKey(itemId);
   for (const bill of bills) {
     if (bill.type === 'simple' && bill.id === itemId) {
       bill.paid = checked;
     } else if (bill.type === 'installment') {
       const inst = (bill.installments||[]).find(i => i.id === itemId);
       if (inst) { inst.paid = checked; if (checked) { inst.paidGu = checked; inst.paidAndrei = checked; } }
+    } else if (bill.type === 'recurring' && rec && bill.id === rec.parentId) {
+      if (!bill.paidByMonth) bill.paidByMonth = {};
+      if (!bill.paidByMonth[rec.monthKey]) bill.paidByMonth[rec.monthKey] = {};
+      bill.paidByMonth[rec.monthKey].paid = checked;
+      if (checked) { bill.paidByMonth[rec.monthKey].paidGu = true; bill.paidByMonth[rec.monthKey].paidAndrei = true; }
     }
   }
   saveBills(bills);
@@ -1232,12 +1351,17 @@ function togglePaidAndrei(itemId, checked) {
 }
 function updateInstOrBill(itemId, updates) {
   const bills = getBills();
+  const rec = getRecurringMonthKey(itemId);
   for (const bill of bills) {
     if (bill.type === 'simple' && bill.id === itemId) {
       Object.assign(bill, updates);
     } else if (bill.type === 'installment') {
       const inst = (bill.installments||[]).find(i => i.id === itemId);
       if (inst) Object.assign(inst, updates);
+    } else if (bill.type === 'recurring' && rec && bill.id === rec.parentId) {
+      if (!bill.paidByMonth) bill.paidByMonth = {};
+      if (!bill.paidByMonth[rec.monthKey]) bill.paidByMonth[rec.monthKey] = {};
+      Object.assign(bill.paidByMonth[rec.monthKey], updates);
     }
   }
   saveBills(bills);
@@ -1246,12 +1370,17 @@ function updateInstOrBill(itemId, updates) {
 
 function toggleSelect(itemId, checked) {
   const bills = getBills();
+  const rec = getRecurringMonthKey(itemId);
   for (const bill of bills) {
     if (bill.type === 'simple' && bill.id === itemId) {
       bill.selected = checked;
     } else if (bill.type === 'installment') {
       const inst = (bill.installments||[]).find(i => i.id === itemId);
       if (inst) inst.selected = checked;
+    } else if (bill.type === 'recurring' && rec && bill.id === rec.parentId) {
+      if (!bill.paidByMonth) bill.paidByMonth = {};
+      if (!bill.paidByMonth[rec.monthKey]) bill.paidByMonth[rec.monthKey] = {};
+      bill.paidByMonth[rec.monthKey].selected = checked;
     }
   }
   saveBills(bills);
@@ -1263,6 +1392,9 @@ function clearSelection() {
   for (const bill of bills) {
     if (bill.type === 'simple') bill.selected = false;
     else if (bill.type === 'installment') (bill.installments||[]).forEach(i => i.selected = false);
+    else if (bill.type === 'recurring') {
+      if (bill.paidByMonth) Object.values(bill.paidByMonth).forEach(m => m.selected = false);
+    }
   }
   saveBills(bills);
   renderBills();
@@ -1277,16 +1409,24 @@ function copyPix(id, pix) {
 }
 
 function deleteBill(itemId) {
+  const rec = getRecurringMonthKey(itemId);
+  if (rec) {
+    // Recurring: always delete the entire recurring bill (all months)
+    if (!confirm('Isso vai remover esta conta recorrente de TODOS os meses. Confirmar?')) return;
+    let bills = getBills().filter(b => !(b.type === 'recurring' && b.id === rec.parentId));
+    saveBills(bills);
+    renderBills();
+    renderRecurringPanel();
+    return;
+  }
   if (!confirm('Excluir esta conta?')) return;
   let bills = getBills();
   bills = bills.filter(bill => {
     if (bill.type === 'simple') return bill.id !== itemId;
     if (bill.type === 'installment') {
-      // If itemId is a parentId, delete all
       if (bill.id === itemId) return false;
-      // If it's an installment id, check if it's the parent's installment — delete whole group
       const inst = (bill.installments||[]).find(i => i.id === itemId);
-      if (inst) return false; // remove whole installment group
+      if (inst) return false;
       return true;
     }
     return true;
@@ -1295,21 +1435,91 @@ function deleteBill(itemId) {
   renderBills();
 }
 
+function deleteRecurringBill(billId) {
+  if (!confirm('Isso vai remover esta conta recorrente de TODOS os meses. Confirmar?')) return;
+  let bills = getBills().filter(b => !(b.type === 'recurring' && b.id === billId));
+  saveBills(bills);
+  renderBills();
+  renderRecurringPanel();
+}
+
 function editBill(itemId) {
+  const rec = getRecurringMonthKey(itemId);
   const bills = getBills();
   let foundBill = null;
-  for (const bill of bills) {
-    if (bill.type === 'simple' && bill.id === itemId) { foundBill = bill; break; }
-    if (bill.type === 'installment') {
-      const inst = (bill.installments||[]).find(i => i.id === itemId);
-      if (inst) { foundBill = bill; break; }
-      if (bill.id === itemId) { foundBill = bill; break; }
+  if (rec) {
+    foundBill = bills.find(b => b.type === 'recurring' && b.id === rec.parentId);
+  } else {
+    for (const bill of bills) {
+      if (bill.type === 'simple' && bill.id === itemId) { foundBill = bill; break; }
+      if (bill.type === 'installment') {
+        const inst = (bill.installments||[]).find(i => i.id === itemId);
+        if (inst) { foundBill = bill; break; }
+        if (bill.id === itemId) { foundBill = bill; break; }
+      }
     }
   }
   if (!foundBill) return;
   state.editingId = foundBill.id;
   state.editingType = 'bill';
   openAddModal('bill', foundBill);
+}
+
+// ─────────────────────────────────────────────────────
+// RECURRING PANEL
+// ─────────────────────────────────────────────────────
+function toggleRecurringPanel() {
+  const body = document.getElementById('recurringPanelBody');
+  const chev = document.getElementById('recurringChevron');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  chev.textContent = open ? '▲' : '▼';
+  if (open) renderRecurringPanel();
+}
+
+function renderRecurringPanel() {
+  const recurring = getBills().filter(b => b.type === 'recurring');
+  document.getElementById('recurringCount').textContent = recurring.length;
+  const list = document.getElementById('recurringListGlobal');
+  if (!list) return;
+  if (recurring.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0">Nenhuma conta recorrente cadastrada.</div>';
+    return;
+  }
+  list.innerHTML = recurring.map(b => `
+    <div class="recurring-list-item">
+      <div class="recurring-info">
+        <div class="r-name">${escHTML(b.name)}</div>
+        <div class="r-meta">
+          <span>Dia ${b.dueDay || '—'}</span>
+          ${b.pix ? '<span style="color:var(--green)">Pix ✓</span>' : ''}
+        </div>
+      </div>
+      <div class="recurring-value">${fmtBRL(b.value)}/mês</div>
+      <div style="display:flex;gap:4px">
+        <button class="bill-act-btn" onclick="editBillById('${b.id}')" title="Editar">✏️</button>
+        <button class="bill-act-btn del" onclick="deleteRecurringBill('${b.id}')" title="Remover de todos os meses">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editBillById(billId) {
+  const bills = getBills();
+  const bill = bills.find(b => b.id === billId);
+  if (!bill) return;
+  state.editingId = bill.id;
+  state.editingType = 'bill';
+  openAddModal('bill', bill);
+}
+
+function openRecurringModal() {
+  openAddModal('bill');
+  // slight delay to let modal render, then pre-check recurring
+  setTimeout(() => {
+    const tog = document.getElementById('mRecurToggle');
+    if (tog) { tog.checked = true; toggleRecurringSection(true); }
+  }, 30);
 }
 
 // ─────────────────────────────────────────────────────
@@ -1486,6 +1696,7 @@ function openAddModal(type, editData=null) {
 
   const isEdit = !!editData;
   const isInstallment = editData && editData.type === 'installment';
+  const isRecurring = editData && editData.type === 'recurring';
   const val = editData ? editData.value || '' : '';
   const name = editData ? editData.name || '' : '';
   const pix = editData ? editData.pix || '' : '';
@@ -1536,6 +1747,9 @@ function openAddModal(type, editData=null) {
 function toggleInstallmentSection(checked) {
   document.getElementById('installmentSection').classList.toggle('visible', checked);
 }
+function toggleRecurringSection(checked) {
+  document.getElementById('recurringSection').classList.toggle('visible', checked);
+}
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.add('hidden');
@@ -1566,9 +1780,21 @@ function saveModal() {
     list = list.filter(b => b.id !== state.editingId);
   }
 
-  if (!isInstallment) {
+  const isRecurringModal = document.getElementById('mRecurToggle').checked;
+
+  if (isRecurringModal) {
+    // Preserve existing paidByMonth if editing
+    const existingPaidByMonth = state.editingId
+      ? (getBills().find(b => b.id === state.editingId) || {}).paidByMonth || {}
+      : {};
+    list.push({
+      id: state.editingId || uid(),
+      type: 'recurring',
+      name, value, dueDay, pix,
+      paidByMonth: existingPaidByMonth,
+    });
+  } else if (!isInstallment) {
     // Simple
-    const [y, m] = instStart.split('-');
     const monthKey = currentMonthKey();
     const dueDate = `${monthKey}-${String(dueDay).padStart(2,'0')}`;
     list.push({
@@ -1603,7 +1829,7 @@ function saveModal() {
 
   saveList(list);
   closeModal();
-  if (type === 'bill') renderBills();
+  if (type === 'bill') { renderBills(); renderRecurringPanel(); }
   else renderIncomes();
 }
 
