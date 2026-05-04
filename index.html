@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e11;
+    --surface: #17171c;
+    --surface2: #1e1e25;
+    --surface3: #26262f;
+    --border: #2e2e3a;
+    --border2: #3a3a48;
+    --text: #e8e6f0;
+    --text2: #9b99aa;
+    --text3: #5c5a6a;
+    --accent: #c084fc;
+    --accent2: #a855f7;
+    --accent-glow: rgba(192,132,252,0.15);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --gold: #fbbf24;
+    --gold-dim: rgba(251,191,36,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ─── SPLASH / MONTH SELECTOR ─── */
+  #splash {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(192,132,252,0.08) 0%, transparent 70%);
+  }
+  .splash-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-align: center;
+  }
+  .splash-title span { color: var(--accent); }
+  .splash-sub {
+    color: var(--text2);
+    font-size: 15px;
+    text-align: center;
+  }
+  .splash-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    width: min(440px, 90vw);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .splash-card label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text2);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .month-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .month-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .month-btn:hover { border-color: var(--accent); color: var(--text); }
+  .month-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+  .year-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .year-row button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .year-row button:hover { border-color: var(--accent); }
+  .year-display {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+    text-align: center;
+  }
+  .area-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .area-btn {
+    padding: 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .area-btn .area-icon { font-size: 22px; }
+  .area-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .area-btn.couple:hover { border-color: var(--gold); background: var(--gold-dim); }
+
+  /* ─── MAIN APP ─── */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+
+  /* HEADER */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 16px;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .header-logo span { color: var(--accent); }
+  .header-area-badge {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid var(--accent2);
+  }
+  .header-area-badge.couple {
+    background: var(--gold-dim);
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+  .month-display {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .month-display .md-label { color: var(--text3); font-size: 11px; font-family: 'DM Sans', sans-serif; text-transform: uppercase; letter-spacing: 0.1em; }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--border2); background: var(--surface3); }
+  .btn-primary {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--text2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-danger { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-success { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .tab-btn {
+    padding: 14px 20px;
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .tab-btn:hover { color: var(--text2); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* CONTENT */
+  .app-content {
+    flex: 1;
+    padding: 24px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .sum-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+  }
+  .sum-card .sc-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .sum-card .sc-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sum-card.highlight { border-color: var(--accent); background: var(--accent-glow); }
+  .sum-card.highlight .sc-value { color: var(--accent); }
+  .sum-card.green-card { border-color: var(--green); background: var(--green-dim); }
+  .sum-card.green-card .sc-value { color: var(--green); }
+  .sum-card.red-card { border-color: var(--red); background: var(--red-dim); }
+  .sum-card.red-card .sc-value { color: var(--red); }
+
+  /* SELECTION BAR */
+  .selection-bar {
+    background: var(--surface2);
+    border: 1px solid var(--accent2);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .selection-bar.visible { display: flex; }
+  .sel-info { color: var(--text2); font-size: 13px; }
+  .sel-total { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--accent); font-weight: 500; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    margin-top: 8px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-count {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  /* BILLS LIST */
+  .bills-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+
+  .bill-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .bill-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--border2);
+    border-radius: 3px 0 0 3px;
+    transition: background .15s;
+  }
+  .bill-item:hover { border-color: var(--border2); }
+  .bill-item.overdue::before { background: var(--red); }
+  .bill-item.overdue { border-color: rgba(248,113,113,0.3); }
+  .bill-item.paid::before { background: var(--green); }
+  .bill-item.paid { opacity: 0.55; order: 99; }
+  .bill-item.selected { border-color: var(--accent2); background: var(--accent-glow); }
+  .bill-item.selected::before { background: var(--accent); }
+
+  .bill-check {
+    width: 20px; height: 20px;
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    cursor: pointer;
+    appearance: none;
+    flex-shrink: 0;
+    transition: all .15s;
+    position: relative;
+    background: var(--surface2);
+  }
+  .bill-check:checked {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .bill-check:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .bill-select {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--border2);
+    border-radius: 4px;
+    cursor: pointer;
+    appearance: none;
+    flex-shrink: 0;
+    transition: all .15s;
+    background: var(--surface2);
+    position: relative;
+  }
+  .bill-select:checked {
+    background: var(--accent2);
+    border-color: var(--accent2);
+  }
+  .bill-select:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .bill-info { flex: 1; min-width: 0; }
+  .bill-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bill-name .installment-tag {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--blue);
+    background: var(--blue-dim);
+    border: 1px solid rgba(96,165,250,0.3);
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .bill-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .bill-meta span {
+    font-size: 11px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .bill-meta .due-badge {
+    color: var(--text2);
+    background: var(--surface2);
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .bill-meta .due-badge.overdue { color: var(--red); border-color: rgba(248,113,113,0.3); background: var(--red-dim); }
+  .bill-meta .pix-badge {
+    color: var(--green);
+  }
+
+  .bill-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .bill-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .bill-act-btn {
+    width: 30px; height: 30px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .bill-act-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .bill-act-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+  /* COUPLE PAYMENT ROW */
+  .couple-pay-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .pay-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .pay-label input[type=checkbox] {
+    width: 14px; height: 14px;
+    cursor: pointer;
+    accent-color: var(--accent2);
+  }
+  .pay-amount { font-family: 'DM Mono', monospace; color: var(--text2); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-state .es-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* INCOME SECTION */
+  .income-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .income-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .income-card label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+  .income-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .income-input-row input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .income-input-row input:focus { border-color: var(--accent2); }
+  .proportion-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--surface3);
+    overflow: hidden;
+    margin-top: 14px;
+    display: flex;
+    gap: 2px;
+  }
+  .prop-gu { height: 100%; background: var(--accent2); border-radius: 4px 0 0 4px; transition: width .3s; }
+  .prop-andrei { height: 100%; background: var(--gold); border-radius: 0 4px 4px 0; flex: 1; }
+  .prop-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* SUPERMARKET */
+  .super-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .super-card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .super-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    width: min(560px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .modal-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent2); }
+  .form-group select option { background: var(--surface2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .toggle-input {
+    width: 18px; height: 18px;
+    accent-color: var(--accent2);
+    cursor: pointer;
+  }
+  .installment-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .installment-section.visible { display: flex; }
+
+  .pix-copy-btn {
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .pix-copy-btn:hover { background: var(--green); color: #000; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .app-header { padding: 0 16px; }
+    .tabs { padding: 0 16px; overflow-x: auto; }
+    .app-content { padding: 16px; }
+    .income-grid { grid-template-columns: 1fr; }
+    .super-inputs { grid-template-columns: 1fr 1fr; }
+    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+    .bill-item { flex-wrap: wrap; }
+    .bill-actions { width: 100%; justify-content: flex-end; }
+    .summary-bar { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── SPLASH ─── -->
+<div id="splash">
+  <div>
+    <div class="splash-title">Controle <span>Financeiro</span></div>
+    <div class="splash-sub" style="margin-top:8px">Selecione o período e a área para começar</div>
+  </div>
+  <div class="splash-card">
+    <div>
+      <label>Ano</label>
+      <div class="year-row">
+        <button onclick="changeYear(-1)">‹</button>
+        <div class="year-display" id="yearDisplay">2026</div>
+        <button onclick="changeYear(1)">›</button>
+      </div>
+    </div>
+    <div>
+      <label>Mês</label>
+      <div class="month-picker" id="monthPicker"></div>
+    </div>
+    <div>
+      <label>Área</label>
+      <div class="area-selector">
+        <button class="area-btn" onclick="enterApp('gu')">
+          <span class="area-icon">👤</span>
+          <span>Financeiro Gu</span>
+        </button>
+        <button class="area-btn couple" onclick="enterApp('casal')">
+          <span class="area-icon">💑</span>
+          <span>Financeiro Casal</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── APP ─── -->
+<div id="app" style="display:none; flex-direction:column">
+
+  <header class="app-header">
+    <div class="header-left">
+      <div class="header-logo">Fin<span>.</span></div>
+      <div id="areaBadge" class="header-area-badge">Gu</div>
+    </div>
+    <div class="month-display">
+      <span class="md-label">Visualizando</span>
+      <span id="monthLabel" style="font-family:'Playfair Display',serif;font-weight:600">—</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" onclick="backToSplash()">← Trocar mês</button>
+      <button class="btn btn-primary btn-sm" onclick="openAddModal('bill')">+ Conta</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('bills')" id="tab-bills">📋 Contas</button>
+    <button class="tab-btn" onclick="switchTab('income')" id="tab-income">💰 Recebimentos</button>
+    <button class="tab-btn couple-tab" onclick="switchTab('couple')" id="tab-couple" style="display:none">💑 Renda / Divisão</button>
+  </div>
+
+  <div class="app-content">
+
+    <!-- TAB: BILLS -->
+    <div id="tabContent-bills">
+      <div class="summary-bar" id="summaryBar"></div>
+
+      <div class="selection-bar" id="selectionBar">
+        <div class="sel-info">
+          <span id="selCount">0</span> itens selecionados
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Total selecionado</div>
+            <div class="sel-total" id="selTotal">R$ 0,00</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Limpar</button>
+        </div>
+      </div>
+
+      <div id="billsContainer"></div>
+    </div>
+
+    <!-- TAB: INCOME -->
+    <div id="tabContent-income" style="display:none">
+      <div class="summary-bar" id="incomeSummaryBar"></div>
+      <div class="section-header">
+        <div class="section-title">Recebimentos <span class="section-count" id="incomeCount">0</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal('income')">+ Recebimento</button>
+      </div>
+      <div class="bills-list" id="incomeList"></div>
+    </div>
+
+    <!-- TAB: COUPLE -->
+    <div id="tabContent-couple" style="display:none">
+      <div class="income-grid">
+        <div class="income-card">
+          <label>🟣 Renda Gu</label>
+          <div class="income-input-row">
+            <input type="number" id="rendaGu" placeholder="0,00" min="0" step="0.01" oninput="updateProportions()">
+          </div>
+        </div>
+        <div class="income-card">
+          <label>🟡 Renda Andrei</label>
+          <div class="income-input-row">
+            <input type="number" id="rendaAndrei" placeholder="0,00" min="0" step="0.01" oninput="updateProportions()">
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:24px" id="proportionPanel">
+        <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Divisão Proporcional</div>
+        <div class="proportion-bar">
+          <div class="prop-gu" id="propGu" style="width:50%"></div>
+          <div class="prop-andrei" id="propAndrei"></div>
+        </div>
+        <div class="prop-labels">
+          <span id="propGuLabel">Gu: 50%</span>
+          <span id="propAndreiLabel">Andrei: 50%</span>
+        </div>
+      </div>
+
+      <div class="super-card">
+        <h3>🛒 Supermercado</h3>
+        <div class="super-inputs">
+          <div class="form-group">
+            <label>Valor semanal</label>
+            <input type="number" id="superWeekly" placeholder="0,00" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Nº de semanas</label>
+            <input type="number" id="superWeeks" placeholder="4" min="1" max="6" value="4">
+          </div>
+          <button class="btn btn-primary" onclick="addSupermarket()" style="align-self:flex-end">Gerar conta</button>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:var(--text3)" id="superPreview"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── MODAL ─── -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Nova Conta</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modalSaveBtn" onclick="saveModal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTHS_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+let state = {
+  selectedMonth: new Date().getMonth(),
+  selectedYear: new Date().getFullYear(),
+  area: 'gu', // 'gu' | 'casal'
+  editingId: null,
+  editingType: null,
+  modalType: null, // 'bill' | 'income'
+};
+
+function getKey(suffix) {
+  return `fin_${state.area}_${suffix}`;
+}
+
+function loadData(key, def=[]) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; }
+}
+function saveData(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+function getBills() { return loadData(getKey('bills'), []); }
+function saveBills(d) { saveData(getKey('bills'), d); }
+function getIncomes() { return loadData(getKey('incomes'), []); }
+function saveIncomes(d) { saveData(getKey('incomes'), d); }
+function getCouple() { return loadData(getKey('couple'), { rendaGu: 0, rendaAndrei: 0 }); }
+function saveCouple(d) { saveData(getKey('couple'), d); }
+
+// ─────────────────────────────────────────────────────
+// SPLASH
+// ─────────────────────────────────────────────────────
+let splashYear = new Date().getFullYear();
+let splashMonth = new Date().getMonth();
+
+function renderSplash() {
+  document.getElementById('yearDisplay').textContent = splashYear;
+  const mp = document.getElementById('monthPicker');
+  mp.innerHTML = '';
+  MONTHS_SHORT.forEach((m, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'month-btn' + (i === splashMonth ? ' active' : '');
+    btn.textContent = m;
+    btn.onclick = () => {
+      splashMonth = i;
+      document.querySelectorAll('.month-btn').forEach((b,j) => b.classList.toggle('active', j===i));
+    };
+    mp.appendChild(btn);
+  });
+}
+
+function changeYear(d) {
+  splashYear += d;
+  document.getElementById('yearDisplay').textContent = splashYear;
+}
+
+function enterApp(area) {
+  state.selectedMonth = splashMonth;
+  state.selectedYear = splashYear;
+  state.area = area;
+  document.getElementById('splash').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'flex';
+  // Set header
+  const badge = document.getElementById('areaBadge');
+  badge.textContent = area === 'gu' ? 'Gu' : 'Casal';
+  badge.className = 'header-area-badge' + (area === 'casal' ? ' couple' : '');
+  document.getElementById('monthLabel').textContent = `${MONTHS[state.selectedMonth]} ${state.selectedYear}`;
+  // Show couple tab if needed
+  document.getElementById('tab-couple').style.display = area === 'casal' ? 'flex' : 'none';
+  switchTab('bills');
+  renderBills();
+  if (area === 'casal') loadCoupleData();
+}
+
+function backToSplash() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('splash').style.display = 'flex';
+  renderSplash();
+}
+
+// ─────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['bills','income','couple'].forEach(t => {
+    const btn = document.getElementById(`tab-${t}`);
+    const content = document.getElementById(`tabContent-${t}`);
+    if (!btn || !content) return;
+    btn.classList.toggle('active', t === tab);
+    content.style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'bills') renderBills();
+  if (tab === 'income') renderIncomes();
+  if (tab === 'couple') { loadCoupleData(); updateProportions(); }
+}
+
+// ─────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────
+function fmtBRL(v) {
+  return 'R$ ' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}`;
+}
+function isOverdue(dueDate, paid) {
+  if (paid || !dueDate) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueDate + 'T00:00:00');
+  return due < today;
+}
+function getMonthKey(y, m) {
+  return `${y}-${String(m+1).padStart(2,'0')}`;
+}
+function currentMonthKey() {
+  return getMonthKey(state.selectedYear, state.selectedMonth);
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// Generate installments from a bill definition
+function generateInstallments(bill) {
+  // bill: { id, name, value, dueDay, pix, totalInstallments, startYearMonth }
+  // startYearMonth: "YYYY-MM"
+  const installments = [];
+  let [sy, sm] = bill.startYearMonth.split('-').map(Number);
+  sm -= 1; // 0-indexed
+  for (let i = 0; i < bill.totalInstallments; i++) {
+    let m = (sm + i) % 12;
+    let y = sy + Math.floor((sm + i) / 12);
+    const monthKey = getMonthKey(y, m);
+    const dueDay = bill.dueDay || 1;
+    const dueDate = `${y}-${String(m+1).padStart(2,'0')}-${String(dueDay).padStart(2,'0')}`;
+    installments.push({
+      id: `${bill.id}_${i}`,
+      parentId: bill.id,
+      name: bill.name,
+      value: bill.value,
+      dueDate,
+      monthKey,
+      pix: bill.pix,
+      installmentNum: i + 1,
+      totalInstallments: bill.totalInstallments,
+      paid: false,
+      paidGu: false,
+      paidAndrei: false,
+      selected: false,
+    });
+  }
+  return installments;
+}
+
+// Merge installment state from saved bills
+function getInstallmentsForMonth(bills, monthKey) {
+  const result = [];
+  for (const bill of bills) {
+    if (bill.type === 'simple') {
+      // Simple bill: show if dueDate is in this month
+      if (bill.monthKey === monthKey) {
+        result.push({...bill, isInstallment: false});
+      }
+    } else if (bill.type === 'installment') {
+      // Find the installment for this month
+      const inst = (bill.installments || []).find(i => i.monthKey === monthKey);
+      if (inst) {
+        result.push({...inst, isInstallment: true, parentName: bill.name});
+      }
+    }
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER BILLS
+// ─────────────────────────────────────────────────────
+function renderBills() {
+  const bills = getBills();
+  const monthKey = currentMonthKey();
+  let items = getInstallmentsForMonth(bills, monthKey);
+
+  // Sort: unpaid first by dueDate, paid at end
+  items.sort((a, b) => {
+    if (a.paid !== b.paid) return a.paid ? 1 : -1;
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    return 0;
+  });
+
+  // Summary
+  const total = items.reduce((s, i) => s + Number(i.value||0), 0);
+  const totalPaid = items.filter(i => i.paid).reduce((s, i) => s + Number(i.value||0), 0);
+  const totalOpen = total - totalPaid;
+  const selected = items.filter(i => i.selected);
+  const selTotal = selected.reduce((s, i) => s + Number(i.value||0), 0);
+
+  document.getElementById('summaryBar').innerHTML = `
+    <div class="sum-card"><div class="sc-label">Total do mês</div><div class="sc-value">${fmtBRL(total)}</div></div>
+    <div class="sum-card red-card"><div class="sc-label">Em aberto</div><div class="sc-value">${fmtBRL(totalOpen)}</div></div>
+    <div class="sum-card green-card"><div class="sc-label">Pago</div><div class="sc-value">${fmtBRL(totalPaid)}</div></div>
+    <div class="sum-card highlight"><div class="sc-label">Contas</div><div class="sc-value">${items.length}</div></div>
+  `;
+
+  // Selection bar
+  const selBar = document.getElementById('selectionBar');
+  if (selected.length > 0) {
+    selBar.classList.add('visible');
+    document.getElementById('selCount').textContent = selected.length;
+    document.getElementById('selTotal').textContent = fmtBRL(selTotal);
+  } else {
+    selBar.classList.remove('visible');
+  }
+
+  // Bills
+  const container = document.getElementById('billsContainer');
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><p>Nenhuma conta em <strong>${MONTHS[state.selectedMonth]} ${state.selectedYear}</strong>.<br>Adicione uma conta com o botão acima.</p></div>`;
+    return;
+  }
+
+  const unpaid = items.filter(i => !i.paid);
+  const paid = items.filter(i => i.paid);
+
+  let html = '';
+  if (unpaid.length > 0) {
+    html += `<div class="section-header"><div class="section-title">Em aberto <span class="section-count">${unpaid.length}</span></div></div>`;
+    html += `<div class="bills-list">` + unpaid.map(item => billItemHTML(item)).join('') + `</div>`;
+  }
+  if (paid.length > 0) {
+    html += `<div class="section-header" style="margin-top:16px"><div class="section-title" style="color:var(--green)">✓ Pagos <span class="section-count">${paid.length}</span></div></div>`;
+    html += `<div class="bills-list">` + paid.map(item => billItemHTML(item)).join('') + `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function billItemHTML(item) {
+  const overdue = isOverdue(item.dueDate, item.paid);
+  const classes = ['bill-item', overdue ? 'overdue' : '', item.paid ? 'paid' : '', item.selected ? 'selected' : ''].filter(Boolean).join(' ');
+  
+  let instTag = '';
+  if (item.isInstallment) {
+    instTag = `<span class="installment-tag">${item.installmentNum}/${item.totalInstallments}</span>`;
+  }
+
+  let pixBtn = '';
+  if (item.pix) {
+    pixBtn = `<span class="pix-badge">Pix ✓</span><button class="pix-copy-btn" onclick="copyPix('${item.id}','${item.pix.replace(/'/g,"\\'")}')">copiar</button>`;
+  }
+
+  let couplePayRow = '';
+  if (state.area === 'casal') {
+    const couple = getCouple();
+    const prop = calcProportion(couple.rendaGu, couple.rendaAndrei);
+    const vGu = item.value * prop.gu;
+    const vAndrei = item.value * prop.andrei;
+    couplePayRow = `
+      <div class="couple-pay-row">
+        <label class="pay-label">
+          <input type="checkbox" ${item.paidGu ? 'checked' : ''} onchange="togglePaidGu('${item.id}', this.checked)">
+          🟣 Gu <span class="pay-amount">${fmtBRL(vGu)} (${Math.round(prop.gu*100)}%)</span>
+        </label>
+        <label class="pay-label">
+          <input type="checkbox" ${item.paidAndrei ? 'checked' : ''} onchange="togglePaidAndrei('${item.id}', this.checked)">
+          🟡 Andrei <span class="pay-amount">${fmtBRL(vAndrei)} (${Math.round(prop.andrei*100)}%)</span>
+        </label>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="${classes}" id="bill-${item.id}">
+      <input type="checkbox" class="bill-select" ${item.selected ? 'checked' : ''} onchange="toggleSelect('${item.id}', this.checked)" title="Selecionar para soma">
+      <input type="checkbox" class="bill-check" ${item.paid ? 'checked' : ''} onchange="togglePaid('${item.id}', this.checked)" title="Marcar como pago">
+      <div class="bill-info">
+        <div class="bill-name">${escHTML(item.name)} ${instTag}</div>
+        <div class="bill-meta">
+          ${item.dueDate ? `<span class="due-badge ${overdue ? 'overdue' : ''}">📅 Vence ${fmtDate(item.dueDate)}</span>` : ''}
+          ${pixBtn}
+        </div>
+        ${couplePayRow}
+      </div>
+      <div class="bill-value">${fmtBRL(item.value)}</div>
+      <div class="bill-actions">
+        <button class="bill-act-btn" onclick="editBill('${item.id}')" title="Editar">✏️</button>
+        <button class="bill-act-btn del" onclick="deleteBill('${item.id}')" title="Excluir">🗑</button>
+      </div>
+    </div>
+  `;
+}
+
+function escHTML(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────────────
+// BILL ACTIONS
+// ─────────────────────────────────────────────────────
+function togglePaid(itemId, checked) {
+  const bills = getBills();
+  for (const bill of bills) {
+    if (bill.type === 'simple' && bill.id === itemId) {
+      bill.paid = checked;
+    } else if (bill.type === 'installment') {
+      const inst = (bill.installments||[]).find(i => i.id === itemId);
+      if (inst) { inst.paid = checked; if (checked) { inst.paidGu = checked; inst.paidAndrei = checked; } }
+    }
+  }
+  saveBills(bills);
+  renderBills();
+}
+
+function togglePaidGu(itemId, checked) {
+  updateInstOrBill(itemId, {paidGu: checked});
+}
+function togglePaidAndrei(itemId, checked) {
+  updateInstOrBill(itemId, {paidAndrei: checked});
+}
+function updateInstOrBill(itemId, updates) {
+  const bills = getBills();
+  for (const bill of bills) {
+    if (bill.type === 'simple' && bill.id === itemId) {
+      Object.assign(bill, updates);
+    } else if (bill.type === 'installment') {
+      const inst = (bill.installments||[]).find(i => i.id === itemId);
+      if (inst) Object.assign(inst, updates);
+    }
+  }
+  saveBills(bills);
+  renderBills();
+}
+
+function toggleSelect(itemId, checked) {
+  const bills = getBills();
+  for (const bill of bills) {
+    if (bill.type === 'simple' && bill.id === itemId) {
+      bill.selected = checked;
+    } else if (bill.type === 'installment') {
+      const inst = (bill.installments||[]).find(i => i.id === itemId);
+      if (inst) inst.selected = checked;
+    }
+  }
+  saveBills(bills);
+  renderBills();
+}
+
+function clearSelection() {
+  const bills = getBills();
+  for (const bill of bills) {
+    if (bill.type === 'simple') bill.selected = false;
+    else if (bill.type === 'installment') (bill.installments||[]).forEach(i => i.selected = false);
+  }
+  saveBills(bills);
+  renderBills();
+}
+
+function copyPix(id, pix) {
+  navigator.clipboard.writeText(pix).then(() => {
+    // brief visual feedback
+    const btn = document.querySelector(`#bill-${id} .pix-copy-btn`);
+    if (btn) { btn.textContent = 'copiado!'; setTimeout(() => btn.textContent = 'copiar', 1500); }
+  });
+}
+
+function deleteBill(itemId) {
+  if (!confirm('Excluir esta conta?')) return;
+  let bills = getBills();
+  bills = bills.filter(bill => {
+    if (bill.type === 'simple') return bill.id !== itemId;
+    if (bill.type === 'installment') {
+      // If itemId is a parentId, delete all
+      if (bill.id === itemId) return false;
+      // If it's an installment id, check if it's the parent's installment — delete whole group
+      const inst = (bill.installments||[]).find(i => i.id === itemId);
+      if (inst) return false; // remove whole installment group
+      return true;
+    }
+    return true;
+  });
+  saveBills(bills);
+  renderBills();
+}
+
+function editBill(itemId) {
+  const bills = getBills();
+  let foundBill = null;
+  for (const bill of bills) {
+    if (bill.type === 'simple' && bill.id === itemId) { foundBill = bill; break; }
+    if (bill.type === 'installment') {
+      const inst = (bill.installments||[]).find(i => i.id === itemId);
+      if (inst) { foundBill = bill; break; }
+      if (bill.id === itemId) { foundBill = bill; break; }
+    }
+  }
+  if (!foundBill) return;
+  state.editingId = foundBill.id;
+  state.editingType = 'bill';
+  openAddModal('bill', foundBill);
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER INCOMES
+// ─────────────────────────────────────────────────────
+function renderIncomes() {
+  const incomes = getIncomes();
+  const monthKey = currentMonthKey();
+  let items = getInstallmentsForMonth(incomes, monthKey);
+  items.sort((a, b) => {
+    if (a.paid !== b.paid) return a.paid ? 1 : -1;
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    return 0;
+  });
+
+  const total = items.reduce((s,i) => s+Number(i.value||0),0);
+  const received = items.filter(i=>i.paid).reduce((s,i)=>s+Number(i.value||0),0);
+  document.getElementById('incomeSummaryBar').innerHTML = `
+    <div class="sum-card"><div class="sc-label">Total a receber</div><div class="sc-value">${fmtBRL(total)}</div></div>
+    <div class="sum-card green-card"><div class="sc-label">Recebido</div><div class="sc-value">${fmtBRL(received)}</div></div>
+    <div class="sum-card red-card"><div class="sc-label">Pendente</div><div class="sc-value">${fmtBRL(total-received)}</div></div>
+  `;
+  document.getElementById('incomeCount').textContent = items.length;
+
+  const list = document.getElementById('incomeList');
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="es-icon">💸</div><p>Nenhum recebimento em <strong>${MONTHS[state.selectedMonth]} ${state.selectedYear}</strong>.</p></div>`;
+    return;
+  }
+  list.innerHTML = items.map(item => incomeItemHTML(item)).join('');
+}
+
+function incomeItemHTML(item) {
+  const classes = ['bill-item', item.paid ? 'paid' : ''].filter(Boolean).join(' ');
+  let instTag = item.isInstallment ? `<span class="installment-tag">${item.installmentNum}/${item.totalInstallments}</span>` : '';
+  return `
+    <div class="${classes}" id="income-${item.id}" style="--bill-accent:var(--green)">
+      <input type="checkbox" class="bill-check" ${item.paid?'checked':''} onchange="toggleIncomePaid('${item.id}', this.checked)">
+      <div class="bill-info">
+        <div class="bill-name" style="color:var(--green)">${escHTML(item.name)} ${instTag}</div>
+        <div class="bill-meta">
+          ${item.dueDate ? `<span class="due-badge">📅 ${fmtDate(item.dueDate)}</span>` : ''}
+        </div>
+      </div>
+      <div class="bill-value" style="color:var(--green)">${fmtBRL(item.value)}</div>
+      <div class="bill-actions">
+        <button class="bill-act-btn del" onclick="deleteIncome('${item.id}')">🗑</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleIncomePaid(itemId, checked) {
+  const incomes = getIncomes();
+  for (const inc of incomes) {
+    if (inc.type === 'simple' && inc.id === itemId) inc.paid = checked;
+    else if (inc.type === 'installment') {
+      const inst = (inc.installments||[]).find(i => i.id === itemId);
+      if (inst) inst.paid = checked;
+    }
+  }
+  saveIncomes(incomes);
+  renderIncomes();
+}
+
+function deleteIncome(itemId) {
+  if (!confirm('Excluir este recebimento?')) return;
+  let incomes = getIncomes();
+  incomes = incomes.filter(inc => {
+    if (inc.type === 'simple') return inc.id !== itemId;
+    if (inc.type === 'installment') {
+      const inst = (inc.installments||[]).find(i => i.id === itemId);
+      return !inst;
+    }
+    return true;
+  });
+  saveIncomes(incomes);
+  renderIncomes();
+}
+
+// ─────────────────────────────────────────────────────
+// COUPLE
+// ─────────────────────────────────────────────────────
+function calcProportion(rGu, rAndrei) {
+  rGu = Number(rGu||0);
+  rAndrei = Number(rAndrei||0);
+  const total = rGu + rAndrei;
+  if (total === 0) return { gu: 0.5, andrei: 0.5 };
+  let gu = rGu / total;
+  let andrei = rAndrei / total;
+  // Clamp 40-60
+  gu = Math.min(0.6, Math.max(0.4, gu));
+  andrei = 1 - gu;
+  return { gu, andrei };
+}
+
+function updateProportions() {
+  const rGu = parseFloat(document.getElementById('rendaGu').value)||0;
+  const rAndrei = parseFloat(document.getElementById('rendaAndrei').value)||0;
+  const prop = calcProportion(rGu, rAndrei);
+  const guPct = Math.round(prop.gu*100);
+  const andreiPct = 100 - guPct;
+  document.getElementById('propGu').style.width = guPct + '%';
+  document.getElementById('propGuLabel').textContent = `Gu: ${guPct}%`;
+  document.getElementById('propAndreiLabel').textContent = `Andrei: ${andreiPct}%`;
+  // Save
+  const d = getCouple();
+  d.rendaGu = rGu;
+  d.rendaAndrei = rAndrei;
+  saveCouple(d);
+  // Update preview
+  updateSuperPreview();
+}
+
+function loadCoupleData() {
+  const d = getCouple();
+  document.getElementById('rendaGu').value = d.rendaGu || '';
+  document.getElementById('rendaAndrei').value = d.rendaAndrei || '';
+  updateProportions();
+}
+
+function updateSuperPreview() {
+  const weekly = parseFloat(document.getElementById('superWeekly').value)||0;
+  const weeks = parseInt(document.getElementById('superWeeks').value)||4;
+  if (!weekly) { document.getElementById('superPreview').textContent = ''; return; }
+  const total = weekly * weeks;
+  const d = getCouple();
+  const prop = calcProportion(d.rendaGu, d.rendaAndrei);
+  document.getElementById('superPreview').innerHTML =
+    `Total: <strong style="color:var(--text)">${fmtBRL(total)}</strong> &nbsp;|&nbsp; 
+     🟣 Gu: <strong style="color:var(--accent)">${fmtBRL(total*prop.gu)}</strong> (${Math.round(prop.gu*100)}%) &nbsp;|&nbsp;
+     🟡 Andrei: <strong style="color:var(--gold)">${fmtBRL(total*prop.andrei)}</strong> (${Math.round(prop.andrei*100)}%)`;
+}
+
+function addSupermarket() {
+  const weekly = parseFloat(document.getElementById('superWeekly').value)||0;
+  const weeks = parseInt(document.getElementById('superWeeks').value)||4;
+  if (!weekly || weekly <= 0) { alert('Informe um valor semanal válido.'); return; }
+  const total = weekly * weeks;
+  const monthKey = currentMonthKey();
+  const [y, m] = monthKey.split('-');
+  const dueDate = `${y}-${m}-28`;
+  const bill = {
+    id: uid(),
+    type: 'simple',
+    name: `🛒 Supermercado – ${MONTHS_SHORT[state.selectedMonth]}/${state.selectedYear}`,
+    value: total,
+    dueDate,
+    monthKey,
+    pix: '',
+    paid: false,
+    paidGu: false,
+    paidAndrei: false,
+    selected: false,
+  };
+  const bills = getBills();
+  bills.push(bill);
+  saveBills(bills);
+  alert(`Conta de supermercado criada: ${fmtBRL(total)}`);
+  switchTab('bills');
+}
+
+// ─────────────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────────────
+function openAddModal(type, editData=null) {
+  state.modalType = type;
+  state.editingId = editData ? editData.id : null;
+  const overlay = document.getElementById('modalOverlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('modalTitle').textContent = editData
+    ? (type === 'bill' ? 'Editar Conta' : 'Editar Recebimento')
+    : (type === 'bill' ? 'Nova Conta' : 'Novo Recebimento');
+
+  const isEdit = !!editData;
+  const isInstallment = editData && editData.type === 'installment';
+  const val = editData ? editData.value || '' : '';
+  const name = editData ? editData.name || '' : '';
+  const pix = editData ? editData.pix || '' : '';
+  const totalInst = isInstallment ? editData.totalInstallments : 1;
+  const startYM = isInstallment ? editData.startYearMonth : currentMonthKey();
+  const dueDay = editData ? (editData.dueDay || (editData.dueDate ? editData.dueDate.split('-')[2] : '')) : '';
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="form-group">
+      <label>Nome</label>
+      <input type="text" id="mName" placeholder="Ex: Aluguel, Netflix..." value="${escHTML(name)}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="mValue" placeholder="0,00" min="0" step="0.01" value="${val}">
+      </div>
+      <div class="form-group">
+        <label>Dia de Vencimento</label>
+        <input type="number" id="mDueDay" placeholder="Ex: 10" min="1" max="31" value="${dueDay}">
+      </div>
+    </div>
+    ${type === 'bill' ? `
+    <div class="form-group">
+      <label>Chave Pix</label>
+      <input type="text" id="mPix" placeholder="CPF, e-mail, telefone..." value="${escHTML(pix)}">
+    </div>
+    ` : ''}
+    <div class="toggle-row">
+      <input type="checkbox" class="toggle-input" id="mInstToggle" ${isInstallment ? 'checked' : ''} onchange="toggleInstallmentSection(this.checked)">
+      <label for="mInstToggle" style="font-size:13px;color:var(--text2);cursor:pointer">Parcelado</label>
+    </div>
+    <div class="installment-section ${isInstallment ? 'visible' : ''}" id="installmentSection">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nº de parcelas</label>
+          <input type="number" id="mInstNum" min="2" max="120" placeholder="Ex: 12" value="${isInstallment ? totalInst : ''}">
+        </div>
+        <div class="form-group">
+          <label>Mês inicial (AAAA-MM)</label>
+          <input type="text" id="mInstStart" placeholder="${currentMonthKey()}" value="${startYM || currentMonthKey()}">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleInstallmentSection(checked) {
+  document.getElementById('installmentSection').classList.toggle('visible', checked);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+  state.editingId = null;
+  state.editingType = null;
+}
+
+function saveModal() {
+  const name = document.getElementById('mName').value.trim();
+  const value = parseFloat(document.getElementById('mValue').value);
+  const dueDay = parseInt(document.getElementById('mDueDay').value) || 1;
+  const pix = document.getElementById('mPix') ? document.getElementById('mPix').value.trim() : '';
+  const isInstallment = document.getElementById('mInstToggle').checked;
+  const instNum = parseInt(document.getElementById('mInstNum')?.value) || 1;
+  const instStart = document.getElementById('mInstStart')?.value || currentMonthKey();
+
+  if (!name) { alert('Informe o nome da conta.'); return; }
+  if (!value || value <= 0) { alert('Informe um valor válido.'); return; }
+
+  const type = state.modalType; // 'bill' | 'income'
+  const getList = type === 'bill' ? getBills : getIncomes;
+  const saveList = type === 'bill' ? saveBills : saveIncomes;
+
+  let list = getList();
+
+  // Remove existing if editing
+  if (state.editingId) {
+    list = list.filter(b => b.id !== state.editingId);
+  }
+
+  if (!isInstallment) {
+    // Simple
+    const [y, m] = instStart.split('-');
+    const monthKey = currentMonthKey();
+    const dueDate = `${monthKey}-${String(dueDay).padStart(2,'0')}`;
+    list.push({
+      id: state.editingId || uid(),
+      type: 'simple',
+      name, value, dueDate, monthKey, pix,
+      paid: false, paidGu: false, paidAndrei: false, selected: false,
+    });
+  } else {
+    if (instNum < 2) { alert('Informe pelo menos 2 parcelas.'); return; }
+    if (!/^\d{4}-\d{2}$/.test(instStart)) { alert('Use o formato AAAA-MM para o mês inicial.'); return; }
+    const billDef = {
+      id: state.editingId || uid(),
+      type: 'installment',
+      name, value, pix, dueDay,
+      totalInstallments: instNum,
+      startYearMonth: instStart,
+    };
+    const installments = generateInstallments(billDef);
+    // Restore paid states if editing
+    if (state.editingId) {
+      const old = getBills().find(b => b.id === state.editingId);
+      if (old && old.installments) {
+        installments.forEach(inst => {
+          const oldInst = old.installments.find(oi => oi.monthKey === inst.monthKey);
+          if (oldInst) { inst.paid = oldInst.paid; inst.paidGu = oldInst.paidGu; inst.paidAndrei = oldInst.paidAndrei; }
+        });
+      }
+    }
+    list.push({ ...billDef, installments });
+  }
+
+  saveList(list);
+  closeModal();
+  if (type === 'bill') renderBills();
+  else renderIncomes();
+}
+
+// ─────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────
+renderSplash();
+
+// Super preview live update
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'superWeekly' || e.target.id === 'superWeeks') {
+    updateSuperPreview();
+  }
+});
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+</script>
+</body>
+</html>
